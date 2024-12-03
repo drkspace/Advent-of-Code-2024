@@ -11,54 +11,50 @@ std::string getInput(const std::string& fp){
     return s.str();
 }
 
-int main(){
-    
+int main(const int argc, char *argv[]){
 
-    std::string inp = getInput("/workspaces/avoc2024/inputs/input3");
+    if (argc != 2) {
+        std::cerr << "Invalid args" << std::endl;
+        return 1;
+    }
+
+    const std::string inp = getInput(argv[1]);
 
     std::smatch ip_result;
 
-    std::regex r("(mul\\(([0-9]{1,3}),([0-9]{1,3})\\))");
-    
+    const std::regex r("(mul\\(([0-9]{1,3}),([0-9]{1,3})\\))");
+
     {
         u_int64_t sum = 0;
         std::string cpy(inp);
-        
-        while (std::regex_search(cpy, ip_result, r)){ //loop
+
+        while (std::regex_search(cpy, ip_result, r)){
 
             sum += std::stoi(ip_result[2]) * std::stoi(ip_result[3]);
-            // std::cout <<  ip_result[0] << std::endl;
 
             cpy = ip_result.suffix();
         }
-        std::cout << sum << std::endl;
+        std::cout << "Part 1 Solution: " << sum << std::endl;
     }
-    
 
     {
         u_int64_t sum = 0;
         std::string cpy(inp);
         std::replace(cpy.begin(), cpy.end(), '\n', '|');
 
-        std::regex r2("don't\\(\\).*?($|do\\(\\))");
+        // Remove parts of the string where the mult would be disabled
+        const std::regex r2(R"(don't\(\).*?($|do\(\)))");
 
         std::string out = cpy;
         while (std::regex_search(out, r2)) {
             out = std::regex_replace(out, r2, "");
         }
-        // std::cout << out << std::endl;
         while (std::regex_search(out, ip_result, r)){ //loop
-
             sum += std::stoi(ip_result[2]) * std::stoi(ip_result[3]);
-            // std::cout <<  ip_result[0] << std::endl;
-
             out = ip_result.suffix();
         }
-        // gt 25059239
-        // gt 83524390
-        // lt 173558055
-        std::cout << sum << std::endl;
+        std::cout << "Part 2 solution: " << sum << std::endl;
     }
 
-    
+
 }
