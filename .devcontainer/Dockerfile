@@ -1,5 +1,8 @@
 FROM mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04
 
+RUN apt-get update
+RUN apt-get install -y gcc-14 g++-14
+
 ARG REINSTALL_CMAKE_VERSION_FROM_SOURCE="3.22.2"
 
 # Optionally install the cmake for vcpkg
