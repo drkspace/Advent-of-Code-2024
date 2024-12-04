@@ -49,7 +49,7 @@ int main(const int argc, char *argv[]){
         while (std::regex_search(out, r2)) {
             out = std::regex_replace(out, r2, "");
         }
-        while (std::regex_search(out, ip_result, r)){ //loop
+        while (std::regex_search(out, ip_result, r)){
             sum += std::stoi(ip_result[2]) * std::stoi(ip_result[3]);
             out = ip_result.suffix();
         }
