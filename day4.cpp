@@ -90,6 +90,23 @@ int backwards(const std::vector<std::string>& inp){
     return forwards(inp, back_match);
 }
 
+int part2(const std::vector<std::string>& inp){
+    int count = 0;
+    for(size_t i = 1; i < inp.size()-1; i++){
+        for(size_t j = 1; j < inp[i].size()-1; j++){
+            if(inp[i][j] == 'A'){
+                if(((inp[i-1][j-1] == 'M' && inp[i+1][j+1] == 'S') ||
+                   (inp[i-1][j-1] == 'S' && inp[i+1][j+1] == 'M') ) &&
+                   ((inp[i-1][j+1] == 'M' && inp[i+1][j-1] == 'S') ||
+                   (inp[i-1][j+1] == 'S' && inp[i+1][j-1] == 'M') )){
+                    count ++;
+                   }
+            }
+        }   
+    }
+    return count;
+}
+
 int main(const int argc, char *argv[]) {
     if (argc != 2) {
         std::cerr << "Invalid args" << std::endl;
@@ -98,10 +115,6 @@ int main(const int argc, char *argv[]) {
 
     const auto inp = getInput(argv[1]);
 
-    // for(const auto& row : inp){
-    //     std::cout << row << std::endl;
-    // }
-    // std::cout << forwards(inp) << ',' << backwards(inp) << std::endl;
-    std::cout << forwards(inp) + backwards(inp) << std::endl;
-    
+    std::cout << "Part 1 solution: " << forwards(inp) + backwards(inp) << std::endl;
+    std::cout << "Part 2 solution: " << part2(inp) << std::endl;
 }
