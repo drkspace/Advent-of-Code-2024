@@ -6,6 +6,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 constexpr auto MATCH = "XMAS";
 constexpr size_t NCHARS = 4;
@@ -24,15 +25,69 @@ std::vector<std::string> getInput(const std::string& fp){
       return out;
 }
 
-int forwards(const std::vector<std::string>& inp) {
+int forwards(const std::vector<std::string>& inp, const std::string& word = MATCH) {
     int count = 0;
+
+    // Forwards
     for (const auto& row: inp) {
-        for (size_t i = 0; i < row.size()-NCHARS-1; ++i) {
-            count += row.substr(i, NCHARS) == MATCH;
+        for (size_t i = 0; i <= row.size()-NCHARS; ++i) {
+            count += row.substr(i, NCHARS) == word;
+        }
+    }
+
+    // Vertical
+    for(size_t i = 0; i<= inp.size()-NCHARS; ++i){
+        for(size_t j = 0; j <= inp[i].size(); ++j){
+            bool good = true;
+            for(size_t k = 0; k < NCHARS; ++k){
+                if(inp[i+k][j] != word[k] ){
+                    good = false;
+                    break;
+                }
+            }
+
+            count += good;
+        }
+    }
+
+
+    // \ diagninoal
+    for(size_t i = 0; i<= inp.size()-NCHARS; ++i){
+        for(size_t j = 0; j <= inp[i].size()-NCHARS; ++j){
+            bool good = true;
+
+            for(size_t k = 0; k < NCHARS; ++k){
+                if(inp[i+k][j+k] != word[k] ){
+                    good = false;
+                    break;
+                }
+            }
+            count += good;
+        }
+    }
+
+    // / diagninoal
+    for(size_t i = 0; i<= inp.size()-NCHARS; ++i){
+        for(size_t j = NCHARS-1; j < inp[i].size(); ++j){
+            bool good = true;
+            for(size_t k = 0; k < NCHARS; ++k){
+                if(inp[i+k][j-k] != word[k] ){
+                    good = false;
+                    break;
+                }
+            }
+            count += good;
         }
     }
 
     return count;
+}
+
+int backwards(const std::vector<std::string>& inp){
+
+    std::string back_match(MATCH);
+    std::reverse(back_match.begin(), back_match.end());
+    return forwards(inp, back_match);
 }
 
 int main(const int argc, char *argv[]) {
@@ -43,8 +98,10 @@ int main(const int argc, char *argv[]) {
 
     const auto inp = getInput(argv[1]);
 
-    for(const auto& row : inp){
-        std::cout << row << std::endl;
-    }
-    std::cout << forwards(inp) << std::endl;
+    // for(const auto& row : inp){
+    //     std::cout << row << std::endl;
+    // }
+    // std::cout << forwards(inp) << ',' << backwards(inp) << std::endl;
+    std::cout << forwards(inp) + backwards(inp) << std::endl;
+    
 }
