@@ -78,8 +78,9 @@ int main(const int argc, char *argv[]) {
     // }
 
     
-    int sum = 0;
-    for(const auto& r: inp.order){
+    int sum1 = 0;
+    int sum2 = 0;
+    for(auto r: inp.order){
         std::unordered_map<int, int> poses;
         for(size_t i = 0; i < r.size(); i++){
             poses[r[i]] = i;
@@ -94,11 +95,39 @@ int main(const int argc, char *argv[]) {
                 break;
             }
         }
-        if(!good){
-            continue;
+        if(good){
+            sum1 += middle;
         }
-        sum += middle;
+        else{
+            good = true;
+            do{
+                good=true;
+                for(const auto& [f,l]: inp.comp){
+                    if((poses.contains(f) && poses.contains(l)) && poses[f] > poses[l]){
+                        // std::cout << f << '|' << l << std::endl;
+
+                        r.erase(r.begin() + poses[l]);
+                        r.insert(r.begin() + poses[f], static_cast<int>(l));
+                        poses.clear();
+                        for(size_t i = 0; i < r.size(); i++){
+                            poses[r[i]] = i;
+                        }
+                        good = false;
+                        break;
+                    }
+                }
+            }while(!good);
+            // for(const auto& ele: r){
+            //     std::cout << ele << ',';
+            // }
+            // std::cout << std::endl;
+            // std::cout << r[r.size()/2] << std::endl;
+            sum2 += r[r.size()/2];
+        }
+        
     }
-    std::cout << sum << std::endl;
+    // std::cout << sum1 << std::endl;
+    std::cout << sum2 << std::endl;
+
     return 0;
 }
