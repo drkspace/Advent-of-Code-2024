@@ -7,6 +7,7 @@
 #include <sstream>
 #include <limits>
 #include <ranges>
+#include <unordered_map>
 
 struct hash_pair {
     // copied from https://www.geeksforgeeks.org/how-to-create-an-unordered_map-of-pairs-in-c/
@@ -47,196 +48,127 @@ struct hash_triple {
 using Map = std::vector<std::vector<char>>;
 using pos = std::pair<int, int>;
 using tracker = std::unordered_set<pos, hash_pair>;
+using BoxLocations = std::unordered_set<pos, hash_pair>;
 
 constexpr char BOX = '#';
-constexpr char VALID = '.';
 constexpr char GUARD = '^';
 
+class Direction{
+    public:
+    enum D{
+        NORTH,
+        SOUTH,
+        EAST,
+        WEST
+    };
+    static D next(D cur){
+        switch (cur)
+        {
+        case D::NORTH:
+            return D::EAST;
+            break;
+        case D::EAST:
+            return D::SOUTH;
+            break;
+        case D::SOUTH:
+            return D::WEST;
+            break;
+        case D::WEST:
+            return D::NORTH;
+            break;
+        }
+        return D::NORTH;
+    }
+};
 
 class GuardState{
-    
+    using BoxHash = std::unordered_map<int, std::vector<int>>;
     public:
-        GuardState(int x, int y): visited({}), visited_dir({}), cur_pos(std::make_pair(x,y)), inital(cur_pos){
-            visit(x, y);
-            visit_dir(std::make_pair(x, y), GuardState::Facing::NORTH);
-        };
-        GuardState(const pos& p): visited({}), visited_dir({}), cur_pos(p), inital(p){
-            visit(p);
-            visit_dir(p, GuardState::Facing::NORTH);
-        };
-        
-        void move(const Map& map){
-            pos tmp;
-            switch (facing)
-            {
-            case Facing::NORTH:
-                tmp = std::make_pair(cur_pos.first-1, cur_pos.second);
-                if(tmp.first >= 0 && map[tmp.first][tmp.second] == BOX){
-                    facing = Facing::EAST;
-                }else{
-                    cur_pos = tmp;
-                }
-                break;
-            case Facing::EAST:
-                tmp = std::make_pair(cur_pos.first, cur_pos.second+1);
-                if(tmp.second < static_cast<int>(map[0].size()) && map[tmp.first][tmp.second] == BOX){
-                    facing = Facing::SOUTH;
-                }else{
-                    cur_pos = tmp;
-                }
-                break;
-            case Facing::SOUTH:
-                tmp = std::make_pair(cur_pos.first+1, cur_pos.second);
-                if(tmp.first < static_cast<int>(map.size()) && map[tmp.first][tmp.second] == BOX){
-                    facing = Facing::WEST;
-                }else{
-                    cur_pos = tmp;
-                }
-                break;
-            case Facing::WEST:
-                tmp = std::make_pair(cur_pos.first, cur_pos.second-1);
-                if(tmp.second >= 0 && map[tmp.first][tmp.second] == BOX){
-                    facing = Facing::NORTH;
-                }else{
-                    cur_pos = tmp;
-                }
-                break;
-            default:
-                break;
+        GuardState(pos g_pos, BoxLocations bl): init_pos(g_pos), box_locations(bl) {
+            for(const auto& [x, y]: box_locations){
+                row_locations[x].push_back(y);
+                col_locations[y].push_back(x);
             }
-            if(in_map(map)){
-                visit(cur_pos);
-                // std::cout << cur_pos.first << ',' <<cur_pos.second << std::endl;
-                visit_dir(cur_pos, facing);
-            }else{
+            for(auto [key, vec]: row_locations){
+                std::sort(vec.begin(), vec.end());
+            }
+            for(auto [key, vec]: col_locations){
+                std::sort(vec.begin(), vec.end());
             }
         }
+        int run(){
 
-        int loops(const Map& map){
-
-            tracker locations; 
-
-            for(const auto& [idx, tmp]: std::ranges::views::enumerate(visited_dir)){
-                const auto& [x, y, dir] = tmp;
-                // continue;
-                auto nf = next(dir);
-                switch (nf)
+            Direction::D d = Direction::D::NORTH;
+            auto cur_pos = init_pos;
+            int count = 0;
+            while(true){
+                switch (d)
                 {
-                case Facing::NORTH:
-                    for(int i = x; i>=0; i--){
-                        if(std::find(visited_dir.begin(), visited_dir.begin()+idx, std::make_tuple(i, y, nf)) != (visited_dir.begin()+idx)){
-                            // std::cout << x << ',' << y-1 << "WEST" << std::endl;
-                            if(x == 3 && y-1 == 4){
-                                std::cout << i << ',' << y << " W" << std::endl;
-                            }
-                            locations.emplace(x, y-1);
-                            break;
+                case Direction::D::NORTH:
+                    if(col_locations.contains(cur_pos.second)){
+                        auto lb = std::lower_bound(col_locations[cur_pos.second].begin(), col_locations[cur_pos.second].end(), cur_pos.first);
+                        auto next = std::distance(col_locations[cur_pos.second].begin(), lb) - 1;
+                        if(next < 0){
+                            return count;
                         }
+                        count += std::abs(cur_pos.first - col_locations[cur_pos.second][next])-1;
+                        cur_pos = std::make_pair(col_locations[cur_pos.second][next]+1, cur_pos.second);
+                    }else{
+                        return count;
                     }
                     break;
-                case Facing::SOUTH:
-                    for(size_t i = x; i< map.size(); i++){
-                        if(std::find(visited_dir.begin(), visited_dir.begin()+idx, std::make_tuple(i, y, nf)) != (visited_dir.begin()+idx)){
-                            // std::cout << x << ',' << y+1 << "EAST"<<  std::endl;
-                            if(x == 3 && y+1 == 4){
-                                std::cout << i << ',' << y << " E" << std::endl;
-                            }
-                            locations.emplace(x, y+1);
-                            break;
+                case Direction::D::EAST:
+                    if(row_locations.contains(cur_pos.first)){
+                        auto lb = std::upper_bound(row_locations[cur_pos.first].begin(), row_locations[cur_pos.first].end(), cur_pos.second);
+                        auto next = std::distance(row_locations[cur_pos.first].begin(), lb) - 1;
+                        if(next < 0){
+                            return count;
                         }
+                        count += std::abs(cur_pos.first - row_locations[cur_pos.first][next])-1;
+                        cur_pos = std::make_pair(cur_pos.first, row_locations[cur_pos.first][next]-1);
+                    }else{
+                        return count;
                     }
                     break;
-                case Facing::EAST:
-                    for(size_t i = y; i<map[0].size(); i++){
-                        if(std::find(visited_dir.begin(), visited_dir.begin()+idx, std::make_tuple(x, i, nf)) != (visited_dir.begin()+idx)){
-                            // std::cout << x-1 << ',' << y << "NORTH"<< std::endl;
-                            if(x-1 == 3 && y == 4){
-                                std::cout << i << ',' << y << " N" << std::endl;
-                            }
-                            locations.emplace(x-1, y);
-                            break;
+                case Direction::D::SOUTH:
+                    if(col_locations.contains(cur_pos.second)){
+                        auto lb = std::upper_bound(col_locations[cur_pos.second].begin(), col_locations[cur_pos.second].end(), cur_pos.first);
+                        auto next = std::distance(col_locations[cur_pos.second].begin(), lb) - 1;
+                        if(next < 0){
+                            return count;
                         }
+                        count += std::abs(cur_pos.first - col_locations[cur_pos.second][next])-1;
+                        cur_pos = std::make_pair(col_locations[cur_pos.second][next]-1, cur_pos.second);
+                    }else{
+                        return count;
                     }
                     break;
-                case Facing::WEST:
-                    for(int i = y; i>=0; i--){
-                        if(std::find(visited_dir.begin(), visited_dir.begin()+idx, std::make_tuple(x, i, nf)) != (visited_dir.begin()+idx)){
-                            //  std::cout << x+1 << ',' << y << "SOUTH"<< std::endl;
-                            if(x+1 == 3 && y == 4){
-                                std::cout << i << ',' << y << " W" << std::endl;
-                            }
-                            locations.emplace(x+1, y);
-                            break;
+                case Direction::D::WEST:
+                    if(row_locations.contains(cur_pos.first)){
+                        auto lb = std::lower_bound(row_locations[cur_pos.first].begin(), row_locations[cur_pos.first].end(), cur_pos.second);
+                        auto next = std::distance(row_locations[cur_pos.first].begin(), lb) - 1;
+                        if(next < 0){
+                            return count;
                         }
+                        count += std::abs(cur_pos.first - row_locations[cur_pos.first][next])-1;
+                        cur_pos = std::make_pair(cur_pos.first, row_locations[cur_pos.first][next]+1);
+                    }else{
+                        return count;
                     }
                     break;
                 default:
                     break;
                 }
+
+                d = Direction::next(d);
             }
-            
-            for(const auto& [x, y]: locations){
-                std::cout << x << ',' << y << std::endl;
-            }
-            return locations.size();
+            return count;
         }
-
-        [[nodiscard]] bool in_map(const Map& map){
-            // std::cout << "im" << std::endl;
-            return cur_pos.first >= 0 && cur_pos.second >= 0 && cur_pos.second < static_cast<int>(map[0].size()) && cur_pos.first < static_cast<int>(map.size());
-        }
-
-        [[nodiscard]] int count(){
-            return visited.size();
-        }
-
-        int loop_count = 0;
-
     private:
-        enum Facing{
-            NORTH,
-            EAST,
-            SOUTH,
-            WEST
-        };
-
-        Facing facing = Facing::NORTH;
-        tracker visited;
-        std::vector<std::tuple<int, int, GuardState::Facing>> visited_dir; 
-
-        pos cur_pos;
-        const pos inital;
-
-        void visit(int x, int y){
-            visited.emplace(x, y);
-        }
-
-        void visit(pos p){
-            visited.emplace(p);
-        }
-
-        void visit_dir(pos p, GuardState::Facing facing){
-            visited_dir.emplace_back(std::make_tuple(p.first, p.second, facing));
-        }
-
-        Facing next(Facing f){
-            switch (f)
-            {
-            case Facing::NORTH:
-                return Facing::EAST;
-                break;
-            case Facing::EAST:
-                return Facing::SOUTH;
-                break;
-            case Facing::SOUTH:
-                return Facing::WEST;
-                break;
-            case Facing::WEST:
-                return Facing::NORTH;
-                break;
-            }
-            return Facing::NORTH;
-        }
+    const pos init_pos;
+    const BoxLocations box_locations;
+    BoxHash row_locations;
+    BoxHash col_locations;
 };
 
 Map getInput(const std::string& fp){
@@ -259,26 +191,24 @@ int main(const int argc, char *argv[]) {
     }
 
     const auto inp = getInput(argv[1]);
-
+    BoxLocations bl;
     pos g_pos;
     for(const auto& [i, row]: std::ranges::views::enumerate(inp)){
         for(const auto& [j, c]: std::ranges::views::enumerate(row)){
             std::cout << c;
-            
-            if(c == GUARD){
+            if(c == BOX){
+                bl.emplace(i, j);
+            }
+            else if(c == GUARD){
                 g_pos = std::make_pair(i, j);
             }
         }
         std::cout << std::endl;
     }
     // std::cout << g_pos.first <<',' << g_pos.second << std::endl;
-    GuardState s(g_pos);
-    while(s.in_map(inp)){
-        // std::cout << "moving" << std::endl;
-        s.move(inp);
-        // std::cout << "done moving" << std::endl;
-    }
-    std::cout << s.count() << std::endl;
+    GuardState s(g_pos, bl);
+    auto c = s.run();
+    std::cout << c << std::endl;
 
     //6,3
     //7,6
@@ -289,7 +219,7 @@ int main(const int argc, char *argv[]) {
 
     //gt 867
     //gt 866
-    auto c = s.loops(inp);
-    std::cout << c << std::endl;
+    // auto c = s.loops(inp);
+    // std::cout << c << std::endl;
     return 0;
 }
