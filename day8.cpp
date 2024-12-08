@@ -48,7 +48,7 @@ struct pos_hash {
     }
 };
 
-using Map = std::pmr::unordered_map<char, std::vector<Pos>>;
+using Map = std::unordered_map<char, std::vector<Pos>>;
 
 
 std::tuple<Map, int, int> getInput(const std::string& fp){
