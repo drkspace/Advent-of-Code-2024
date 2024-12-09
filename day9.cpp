@@ -29,10 +29,10 @@ std::vector<int> getInput(const std::string& fp){
 u_int64_t checksum(const std::vector<int64_t>& s){
     u_int64_t sum = 0;
     for(size_t i = 0; i< s.size(); i++){
-        if(s[i] ==SENTINAL){
+        if(s[i] == SENTINAL){
             continue;
         }
-
+        // std::cout << i << '*' << s[i]<<std::endl;
         sum += i*s[i];
     }
     return sum;
@@ -93,7 +93,84 @@ int main(const int argc, char *argv[]) {
 
     {
         auto d_cpy = data;
-        
+
+        auto start = d_cpy.begin();
+        // for(const auto& ele : d_cpy){
+        //         if(ele == SENTINAL){
+        //             std::cout << '.';
+        //         }else{
+        //             std::cout <<'[' << ele << ']';
+        //         }
+        //     }
+        //     std::cout << std::endl;
+        //     std::cout << std::endl;
+        auto end = d_cpy.end()-1;
+        std::unordered_set<u_int64_t> moved;
+        while(start < end){
+
+            while(*start != SENTINAL){
+                start++;
+            }   
+
+            auto start_cpy = start;
+
+            // end is at the end of the next block
+            while(*end == SENTINAL){
+                end--;
+            }
+            auto last_start = end;
+            while(*end == *last_start){
+                last_start--;
+            }
+            last_start++;
+            if(start_cpy >= last_start){
+                break;
+            }
+            // std::cout << *last_start << std::endl;
+            if(!moved.contains(*last_start)){
+                moved.emplace(*last_start);
+                // std::cout << *last_start << std::endl;
+                const auto len = std::distance(last_start, end)+1;
+
+                for(auto it = start_cpy; it<last_start;){
+                    
+                    if(*it != SENTINAL){
+                        ++it;
+                        continue;
+                    }
+                    
+                    auto blk_end = it;
+                    while (*blk_end == SENTINAL)
+                    {
+                        blk_end++;
+                    }
+                    // std::cout << std::distance(d_cpy.begin(), it) << '-' <<std::distance(d_cpy.begin(), last_start) << *it << ',' << *last_start << std::endl;
+                    if(std::distance(it, blk_end) >= len){
+                        std::swap_ranges(it, it+len, last_start);
+                        break;
+                    }
+
+                    it = blk_end+1;
+                    
+                }
+            }
+            end = last_start-1;
+
+        }
+
+        // for(const auto& ele : d_cpy){
+        //         if(ele == SENTINAL){
+        //             std::cout << '.';
+        //         }else{
+        //             std::cout <<'[' << ele << ']';
+        //         }
+        //     }
+        //     std::cout << std::endl;
+
+        //lt 6469637179774
+        //gt 6450047797159
+        auto tmp = checksum(d_cpy);
+        std::cout << tmp << std::endl;
     }
     return 0;
 }
