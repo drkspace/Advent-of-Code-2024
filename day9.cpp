@@ -1,15 +1,20 @@
+#include <ranges>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-#include <unordered_set>
-#include <sstream>
-#include <limits>
-#include <ranges>
-#include <unordered_map>
+#include <set>
+#include <map>
+#include "easyTimer.h"
 
 constexpr int64_t SENTINAL = -1;
+
+struct locs{
+    uint64_t value;
+    size_t idx;
+    size_t count;
+};
+
 
 std::vector<int> getInput(const std::string& fp){
     std::ifstream file (fp);
@@ -26,6 +31,8 @@ std::vector<int> getInput(const std::string& fp){
       return out;
 }
 
+
+
 u_int64_t checksum(const std::vector<int64_t>& s){
     u_int64_t sum = 0;
     for(size_t i = 0; i< s.size(); i++){
@@ -38,19 +45,33 @@ u_int64_t checksum(const std::vector<int64_t>& s){
     return sum;
 }
 
+u_int64_t checksum(const std::vector<locs>& s){
+    u_int64_t sum = 0;
+    for(const auto& ele: s){
+        for (size_t i = ele.idx; i<(ele.idx+ele.count); ++i) {
+            sum += i*ele.value;
+        }
+    }
+    return sum;
+}
+
+
 int main(const int argc, char *argv[]) {
+    easyTimer<std::chrono::milliseconds> t("main ");
+
     if (argc != 2) {
         std::cerr << "Invalid args" << std::endl;
         return 1;
     }
 
     const auto inp = getInput(argv[1]);
-    
+
     bool isFile = true;
     int id = 0;
+
     std::vector<int64_t> data;
     for(const auto& ele: inp){
-        
+
         for(int i = 0; i<ele; i++){
             if(isFile){
                 data.emplace_back(id);
@@ -62,12 +83,12 @@ int main(const int argc, char *argv[]) {
 
         id += isFile;
         isFile = !isFile;
-        
+
     }
 
     {
         auto d_cpy = data;
-    
+
         // std::cout << 0 << std::endl;
         auto fptr = d_cpy.begin();
         auto bptr = d_cpy.end()-1;
@@ -85,92 +106,60 @@ int main(const int argc, char *argv[]) {
             // std::cout << 4 << std::endl;
             std::iter_swap(fptr, bptr);
         }
-        
+
         //gt 91649267962
         //eq 6435922584968
         std::cout << checksum(d_cpy) << std::endl;
     }
 
-    {
-        auto d_cpy = data;
 
-        auto start = d_cpy.begin();
-        // for(const auto& ele : d_cpy){
-        //         if(ele == SENTINAL){
-        //             std::cout << '.';
-        //         }else{
-        //             std::cout <<'[' << ele << ']';
-        //         }
-        //     }
-        //     std::cout << std::endl;
-        //     std::cout << std::endl;
-        auto end = d_cpy.end()-1;
-        std::unordered_set<u_int64_t> moved;
-        while(start < end){
+        std::map<size_t, std::set<size_t>> open_spaces;
+        std::vector<locs> locations(1000);
+        isFile = true;
+        id = 0;
+        size_t idx = 0;
+        {
 
-            while(*start != SENTINAL){
-                start++;
-            }   
-
-            auto start_cpy = start;
-
-            // end is at the end of the next block
-            while(*end == SENTINAL){
-                end--;
-            }
-            auto last_start = end;
-            while(*end == *last_start){
-                last_start--;
-            }
-            last_start++;
-            if(start_cpy >= last_start){
-                break;
-            }
-            // std::cout << *last_start << std::endl;
-            if(!moved.contains(*last_start)){
-                moved.emplace(*last_start);
-                // std::cout << *last_start << std::endl;
-                const auto len = std::distance(last_start, end)+1;
-
-                for(auto it = start_cpy; it<last_start;){
-                    
-                    if(*it != SENTINAL){
-                        ++it;
-                        continue;
+            for(const auto& ele: inp){
+                if (isFile) {
+                    locations.emplace_back(id, idx, ele);
+                }else {
+                    if (ele != 0) {
+                        open_spaces[ele].emplace(idx);
                     }
-                    
-                    auto blk_end = it;
-                    while (*blk_end == SENTINAL)
-                    {
-                        blk_end++;
-                    }
-                    // std::cout << std::distance(d_cpy.begin(), it) << '-' <<std::distance(d_cpy.begin(), last_start) << *it << ',' << *last_start << std::endl;
-                    if(std::distance(it, blk_end) >= len){
-                        std::swap_ranges(it, it+len, last_start);
-                        break;
-                    }
+                }
+                idx += ele;
 
-                    it = blk_end+1;
-                    
+                id += isFile;
+                isFile = !isFile;
+            }
+        }
+
+        for (auto& l : std::ranges::reverse_view(locations)) {
+
+            const auto lb = open_spaces.lower_bound(l.count);
+            size_t min = l.idx;
+            size_t min_key;
+            for (auto it = lb; it != open_spaces.end(); ++it) {
+                if (*(it->second.begin()) < min) {
+                    min = *(it->second.begin());
+                    min_key = it->first;
                 }
             }
-            end = last_start-1;
+            if (l.idx != min) {
+                l.idx = min;
+                open_spaces[min_key].erase(open_spaces[min_key].begin());
+                if (open_spaces[min_key].empty()) {
+                    open_spaces.erase(min_key);
+                }
+                if (l.count < min_key) {
+                    open_spaces[min_key-l.count].emplace(l.idx+l.count);
+                }
+            }
 
         }
 
-        // for(const auto& ele : d_cpy){
-        //         if(ele == SENTINAL){
-        //             std::cout << '.';
-        //         }else{
-        //             std::cout <<'[' << ele << ']';
-        //         }
-        //     }
-        //     std::cout << std::endl;
+        std::cout << checksum(locations) << std::endl;
 
-        //lt 6469637179774
-        //gt 6450047797159
-        auto tmp = checksum(d_cpy);
-        std::cout << tmp << std::endl;
-    }
     return 0;
 }
