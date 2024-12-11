@@ -12,22 +12,6 @@
 
 using u64 = uint64_t;
 
-constexpr std::array<std::pair<u64, u64>, 17> t = {std::make_pair(10, 1),
-                                                    std::make_pair(100, 2),
-                                                    std::make_pair(1000, 3),
-                                                    std::make_pair(10000, 4),
-                                                    std::make_pair(100000, 5),
-                                                    std::make_pair(1000000, 6),
-                                                    std::make_pair(10000000, 7),
-                                                    std::make_pair(100000000, 8),
-                                                    std::make_pair(1000000000, 9),
-                                                    std::make_pair(10000000000, 10),
-                                                    std::make_pair(100000000000, 11),
-                                                    std::make_pair(1000000000000, 12),
-                                                    std::make_pair(10000000000000, 13),
-                                                    std::make_pair(100000000000000, 14),
-                                                    std::make_pair(1000000000000000, 15)};
-
 std::list<u64> split(const std::string &inp, const char delim)
 {
     std::string tmp;
@@ -55,38 +39,6 @@ std::list<u64> getInput(const std::string &fp)
         }
     }
     return out;
-}
-
-void applyRules(std::list<u64> &stones)
-{
-    for (auto it = stones.begin(); it != stones.end(); it++)
-    {
-        if (*it == 0)
-        {
-            // std::cout << "r0" << std::endl;
-            *it = 1;
-        }
-        else
-        {
-            const u64 l = std::floor(std::log10(*it) + 1);
-            // std::cout << l << ":" << *it << std::endl;
-            if (l % 2 == 0 && *it != 1)
-            {
-                auto s = static_cast<int>(std::pow(10, l / 2));
-                // std::cout << "reven" << l << ":" << *it << '|' << s << std::endl;
-                auto front = (*it) / s;
-                auto end = (*it) % s;
-                *it = end;
-                stones.insert(it, front);
-                // it++;
-            }
-            else
-            {
-                // std::cout << "r2024" << ":" << *it << std::endl;
-                *it *= 2024;
-            }
-        }
-    }
 }
 
 template <size_t DEPTH>
