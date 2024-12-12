@@ -10,11 +10,8 @@
 #include <iostream>
 #include <set>
 #include <map>
-#include <cmath>
 #include "easyTimer.h"
-#include <unordered_map>
 #include <unordered_set>
-#include <ranges>
 
 using u64 = uint64_t;
 using Grid = std::vector<std::vector<char>>;
@@ -23,7 +20,6 @@ enum class Dir{
     UP, DOWN, LEFT, RIGHT
 };
 
-constexpr  char SENTINAL = '.';
 Grid getInput(const std::string &fp)
 {
     std::ifstream file(fp);
@@ -71,7 +67,21 @@ struct comp_pair {
     }
 };
 
-using edge_set = std::set<std::tuple<size_t, size_t, Dir>, comp_pair>;
+struct edge {
+    u64 row;
+    u64 col;
+    Dir dir;
+
+    bool operator<(const edge& other) const {
+        if(this->row == other.row){
+            return other.col > this->col;
+        }else{
+            return other.row > this->row;
+        }
+    }
+};
+
+using edge_set = std::set<edge>;
 
 u64 floodRegion(Grid& g, std::unordered_set<std::pair<size_t, size_t>, hash_pair>& matching, size_t row, size_t col, const char c_to_match) {
     auto c = g[row][col];
@@ -124,16 +134,16 @@ u64 floodRegion2(Grid& g, std::unordered_set<std::pair<size_t, size_t>, hash_pai
         switch (d)
         {
             case Dir::UP:
-            row_edges.emplace(std::make_tuple(row+1, col, Dir::UP));
+            row_edges.emplace(row+1, col, Dir::UP);
             break;
             case Dir::DOWN:
-            row_edges.emplace(std::make_tuple(row, col, Dir::DOWN));
+            row_edges.emplace(row, col, Dir::DOWN);
             break;
             case Dir::LEFT:
-            col_edges.emplace(std::make_tuple(col+1, row, Dir::LEFT));
+            col_edges.emplace(col+1, row, Dir::LEFT);
             break;
         case Dir::RIGHT:
-            col_edges.emplace(std::make_tuple(col, row, Dir::RIGHT));
+            col_edges.emplace(col, row, Dir::RIGHT);
             break;
         default:
             break;
@@ -148,25 +158,25 @@ u64 floodRegion2(Grid& g, std::unordered_set<std::pair<size_t, size_t>, hash_pai
     u64 count = 0;
     if (row==0) {
         count++;
-        row_edges.emplace(std::make_tuple(row, col, Dir::UP));
+        row_edges.emplace(row, col, Dir::UP);
     }else {
         count += floodRegion2(g, matching, row_edges, col_edges, row-1, col, c_to_match, Dir::UP);
     }
     if ((row+1) >= g.size()) {
         count++;
-        row_edges.emplace(std::make_tuple(row+1, col, Dir::DOWN));
+        row_edges.emplace(row+1, col, Dir::DOWN);
     }else {
         count += floodRegion2(g, matching, row_edges, col_edges, row+1, col, c_to_match, Dir::DOWN);
     }
     if (col == 0) {
         count++;
-        col_edges.emplace(std::make_tuple(col, row, Dir::LEFT));
+        col_edges.emplace(col, row, Dir::LEFT);
     }else {
         count += floodRegion2(g, matching, row_edges, col_edges, row, col-1, c_to_match, Dir::LEFT);
     }
     if ((col+1) >= g[0].size()) {
         count++;
-        col_edges.emplace(std::make_tuple(col+1, row, Dir::RIGHT));
+        col_edges.emplace(col+1, row, Dir::RIGHT);
     }else {
         
         count += floodRegion2(g, matching, row_edges, col_edges, row, col+1, c_to_match, Dir::RIGHT);
@@ -187,9 +197,9 @@ std::tuple<u64, std::unordered_set<std::pair<size_t, size_t>, hash_pair>> getCos
 
     for(auto it = row_edges.begin(); it != row_edges.end(); ++it){
         auto s = *it;
-        while(std::next(it) != row_edges.end() && std::get<0>(*std::next(it)) == std::get<0>(s) && (std::get<1>(*std::next(it))) == (std::get<1>(s)+1) && std::get<2>(s)==std::get<2>(*std::next(it))){
+        while(std::next(it) != row_edges.end() && std::next(it)->row == s.row && (std::next(it)->col == s.col+1 && s.dir==std::next(it)->dir)){
             ++it;
-            std::get<1>(s) = std::get<1>(*it);
+            s.col = it->col;
         }
         ++row_edges_count;
     }
@@ -197,9 +207,9 @@ std::tuple<u64, std::unordered_set<std::pair<size_t, size_t>, hash_pair>> getCos
     for(auto it = col_edges.begin(); it != col_edges.end(); ++it){
         auto s = *it;
 
-        while(std::next(it) != col_edges.end() && std::get<0>(*std::next(it)) == std::get<0>(s) && (std::get<1>(*std::next(it))) == (std::get<1>(s)+1) && std::get<2>(s)==std::get<2>(*std::next(it))){
+        while(std::next(it) != col_edges.end() && std::next(it)->row == s.row && (std::next(it)->col == s.col+1 && s.dir==std::next(it)->dir)){
             ++it;
-            std::get<1>(s) = std::get<1>(*it);
+            s.col = it->col;
         }
         ++col_edges_count;
     }
