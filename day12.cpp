@@ -19,6 +19,9 @@
 using u64 = uint64_t;
 using Grid = std::vector<std::vector<char>>;
 
+enum class Dir{
+    UP, DOWN, LEFT, RIGHT
+};
 
 constexpr  char SENTINAL = '.';
 Grid getInput(const std::string &fp)
@@ -58,17 +61,17 @@ struct hash_pair {
 struct comp_pair {
     // copied from https://www.geeksforgeeks.org/how-to-create-an-unordered_map-of-pairs-in-c/
     template <class T1, class T2>
-    bool operator()(const std::pair<T1, T2>& p1, const std::pair<T1, T2>& p2) const
+    bool operator()(const std::tuple<T1, T2, Dir>& p1, const std::tuple<T1, T2, Dir>& p2) const
     {
-        if(p1.first == p2.first){
-            return p2.second > p1.second;
+        if(std::get<0>(p1) == std::get<0>(p2)){
+            return std::get<1>(p2) > std::get<1>(p1);
         }else{
-            return p2.first > p1.first;
+            return std::get<0>(p2) > std::get<0>(p1);
         }
     }
 };
 
-using edge_set = std::set<std::pair<size_t, size_t>, comp_pair>;
+using edge_set = std::set<std::tuple<size_t, size_t, Dir>, comp_pair>;
 
 u64 floodRegion(Grid& g, std::unordered_set<std::pair<size_t, size_t>, hash_pair>& matching, size_t row, size_t col, const char c_to_match) {
     auto c = g[row][col];
@@ -110,31 +113,27 @@ std::tuple<u64, std::unordered_set<std::pair<size_t, size_t>, hash_pair>> getCos
 
     std::unordered_set<std::pair<size_t, size_t>, hash_pair> matching;
     u64 edge_count = floodRegion(g, matching, row, col, g[row][col]);
-    std::cout << g[row][col] << ":" << edge_count << "*" << matching.size() << std::endl;
     return  {edge_count * matching.size(), matching};
 }
 
-enum class Dir{
-    UP, DOWN, LEFT, RIGHT
-};
+
 
 u64 floodRegion2(Grid& g, std::unordered_set<std::pair<size_t, size_t>, hash_pair>& matching, edge_set& row_edges, edge_set& col_edges, size_t row, size_t col, const char c_to_match, const Dir d = Dir::UP) {
     auto c = g[row][col];
     if (c != c_to_match) {
         switch (d)
         {
-        case Dir::UP:
-            row_edges.emplace(std::make_pair(row+1, col));
+            case Dir::UP:
+            row_edges.emplace(std::make_tuple(row+1, col, Dir::UP));
             break;
-        case Dir::DOWN:
-            row_edges.emplace(std::make_pair(row, col));
+            case Dir::DOWN:
+            row_edges.emplace(std::make_tuple(row, col, Dir::DOWN));
             break;
-        case Dir::LEFT:
-            col_edges.emplace(std::make_pair(col+1, row));
+            case Dir::LEFT:
+            col_edges.emplace(std::make_tuple(col+1, row, Dir::LEFT));
             break;
         case Dir::RIGHT:
-        // std::cout << "(" << row << ',' << col << ")," << std::endl;
-            col_edges.emplace(std::make_pair(col, row));
+            col_edges.emplace(std::make_tuple(col, row, Dir::RIGHT));
             break;
         default:
             break;
@@ -147,32 +146,27 @@ u64 floodRegion2(Grid& g, std::unordered_set<std::pair<size_t, size_t>, hash_pai
     matching.emplace(row, col);
 
     u64 count = 0;
-    // std::cout << "(" << row << ',' << col << ")" << std::endl;
     if (row==0) {
-        // std::cout << "r=0" << std::endl;
         count++;
-        row_edges.emplace(std::make_pair(row, col));
+        row_edges.emplace(std::make_tuple(row, col, Dir::UP));
     }else {
         count += floodRegion2(g, matching, row_edges, col_edges, row-1, col, c_to_match, Dir::UP);
     }
     if ((row+1) >= g.size()) {
-        // std::cout << "r>=s" << std::endl;
         count++;
-        row_edges.emplace(std::make_pair(row+1, col));
+        row_edges.emplace(std::make_tuple(row+1, col, Dir::DOWN));
     }else {
         count += floodRegion2(g, matching, row_edges, col_edges, row+1, col, c_to_match, Dir::DOWN);
     }
     if (col == 0) {
-        // std::cout << "c=0" << "(" << row << ',' << col << ")" << std::endl;
         count++;
-        col_edges.emplace(std::make_pair(col, row));
+        col_edges.emplace(std::make_tuple(col, row, Dir::LEFT));
     }else {
         count += floodRegion2(g, matching, row_edges, col_edges, row, col-1, c_to_match, Dir::LEFT);
     }
     if ((col+1) >= g[0].size()) {
-        // std::cout << "c>=s" << std::endl;
         count++;
-        col_edges.emplace(std::make_pair(col+1, row));
+        col_edges.emplace(std::make_tuple(col+1, row, Dir::RIGHT));
     }else {
         
         count += floodRegion2(g, matching, row_edges, col_edges, row, col+1, c_to_match, Dir::RIGHT);
@@ -186,60 +180,30 @@ std::tuple<u64, std::unordered_set<std::pair<size_t, size_t>, hash_pair>> getCos
     edge_set row_edges;
     edge_set col_edges;
     std::unordered_set<std::pair<size_t, size_t>, hash_pair> matching;
-    std::cout << g[row][col] << std::endl;
     floodRegion2(g, matching, row_edges, col_edges, row, col, g[row][col]);
-    // std::cout << g[row][col] << ":" << edge_count << "*" << matching.size() << "|" << row_edges.size() << "+" << col_edges.size() << std::endl;
-    // std::cout << "R";
-    // for(const auto&[row, col]: row_edges){
-    //     std::cout << "(" << row << ',' << col << "),";
-    // }
-    // std::cout << std::endl;
-    // std::cout << "C";
-    // for(const auto&[row, col]: col_edges){
-    //     std::cout << "(" << row << ',' << col << "),";
-    // }
-    // std::cout << std::endl;
+
     u64 row_edges_count = 0;
     u64 col_edges_count = 0;
-    // std::cout << "R";
+
     for(auto it = row_edges.begin(); it != row_edges.end(); ++it){
-        // std::cout << "(" << row << ',' << col << "),";
         auto s = *it;
-        // const auto s_org = *it;
-        while(std::next(it) != row_edges.end() && std::next(it)->first == s.first && (std::next(it)->second) == (s.second+1)){
+        while(std::next(it) != row_edges.end() && std::get<0>(*std::next(it)) == std::get<0>(s) && (std::get<1>(*std::next(it))) == (std::get<1>(s)+1) && std::get<2>(s)==std::get<2>(*std::next(it))){
             ++it;
-            s.second = it->second;
+            std::get<1>(s) = std::get<1>(*it);
         }
-        // std::cout << "(" << s_org.first << ',' << s_org.second << ")->""(" << s.first << ',' << s.second << ")" << std::endl;
         ++row_edges_count;
     }
-    // std::cout << std::endl;
-    // std::cout << "C";
+
     for(auto it = col_edges.begin(); it != col_edges.end(); ++it){
-        // std::cout << "(" << row << ',' << col << "),";
         auto s = *it;
-        // const auto s_org = *it;
-        // std::cout << std::next(it)->first << "|" << std::next(it)->second << std::endl;
-        while(std::next(it) != col_edges.end() && std::next(it)->first == s.first && (std::next(it)->second) == (s.second+1)){
+
+        while(std::next(it) != col_edges.end() && std::get<0>(*std::next(it)) == std::get<0>(s) && (std::get<1>(*std::next(it))) == (std::get<1>(s)+1) && std::get<2>(s)==std::get<2>(*std::next(it))){
             ++it;
-            s.second = it->second;
-            // std::cout << std::next(it)->first << "|" << std::next(it)->second << std::endl;
+            std::get<1>(s) = std::get<1>(*it);
         }
-        // std::cout << "(" << s_org.second << ',' << s_org.first << ")->""(" << s.second << ',' << s.first << ")" << std::endl;
         ++col_edges_count;
     }
-    // std::cout << std::endl;
 
-    // for(const auto&[row, col]: row_edges_comb){
-    //     std::cout << "(" << row << ',' << col << "),";
-    // }
-    // std::cout << std::endl;
-    // for(const auto&[col, row]: col_edges_comb){
-    //     std::cout << "(" << row << ',' << col << "),";
-    // }
-    // std::cout << std::endl;
-
-    std::cout << col_edges_count << '+' << row_edges_count << '*' <<matching.size() << std::endl;
     return  {(col_edges_count + row_edges_count) * matching.size(), matching};
 }
 
@@ -260,23 +224,23 @@ int main(const int argc, char *argv[]) {
         }
         std::cout << std::endl;
     }
-    // {
-    //     auto inp_cpy = inp;
-    //     u64 count = 0;
-    //     std::unordered_set<std::pair<size_t, size_t>, hash_pair> found;
+    {
+        auto inp_cpy = inp;
+        u64 count = 0;
+        std::unordered_set<std::pair<size_t, size_t>, hash_pair> found;
 
-    //     for (size_t row = 0; row < inp_cpy.size(); row++) {
-    //         for (size_t col = 0; col < inp_cpy[0].size(); col++) {
-    //             if (!found.contains({row, col})) {
-    //                 auto [c, matching] = getCost4Region(inp_cpy, row,col);
-    //                 count += c;
-    //                 found.insert(matching.begin(), matching.end());
-    //             }
-    //         }
-    //     }
-    //     // auto [c, matching] = getCost4Region(inp, 0,0);
-    //     std::cout << count << std::endl;
-    // }
+        for (size_t row = 0; row < inp_cpy.size(); row++) {
+            for (size_t col = 0; col < inp_cpy[0].size(); col++) {
+                if (!found.contains({row, col})) {
+                    auto [c, matching] = getCost4Region(inp_cpy, row,col);
+                    count += c;
+                    found.insert(matching.begin(), matching.end());
+                }
+            }
+        }
+
+        std::cout << "Part 1 solution: " << count << std::endl; // 1450422
+    }
 
     {
         auto inp_cpy = inp;
@@ -292,7 +256,6 @@ int main(const int argc, char *argv[]) {
                 }
             }
         }
-        // auto [c, matching] = getCost4Region(inp, 0,0);
-        std::cout << count << std::endl;
+        std::cout << "Part 2 solution: " << count << std::endl; // 906606
     }
 }
