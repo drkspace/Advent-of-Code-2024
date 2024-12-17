@@ -3,17 +3,12 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-#include <set>
-#include <map>
 #include "easyTimer.h"
 #include <unordered_set>
 #include <unordered_map>
 
-using u64 = uint64_t;
-
-constexpr size_t N = 7;
-
-using Matrix = std::array<std::array<u64, N>, N>;
+using u64 = int64_t;
+const auto& enumerate = std::ranges::views::enumerate;
 
 constexpr u64 INF = std::numeric_limits<u64>::max()/2;
 
@@ -21,90 +16,166 @@ enum class Dir {
     UP, DOWN, LEFT, RIGHT
 };
 
-Matrix input(const std::string &fp){
+std::vector<std::vector<char>> getInput(const std::string &fp){
     std::ifstream file(fp);
     std::vector<std::vector<char>> tmp_m;
-    Matrix out;
     while (file)
     {
         std::string tmp;
         std::getline(file, tmp);
         if (!tmp.empty())
         {
-            tmp_m.emplace_back(tmp);
+            std::vector<char> tmp_v(tmp.begin(), tmp.end());
+            tmp_m.emplace_back(tmp_v);
         }
     }
     
-    for(size_t i = 0; i< N; ++i){
-        for(size_t j = 0; j< N; ++j){
-            out[i][j] = INF;
-        }
+    return tmp_m;
+}
+
+struct hash_pair {
+    // copied from https://www.geeksforgeeks.org/how-to-create-an-unordered_map-of-pairs-in-c/
+    template <class T1, class T2>
+    size_t operator()(const std::pair<T1, T2>& p) const
+    {
+        // Hash the first element
+        size_t hash1 = std::hash<T1>{}(p.first);
+        // Hash the second element
+        size_t hash2 = std::hash<T2>{}(p.second);
+        // Combine the two hash values
+        return hash1
+               ^ (hash2 + 0x9e3779b9 + (hash1 << 6)
+                  + (hash1 >> 2));
     }
 
-    u64 node_idx = 1;
-    std::unordered_map<std::tuple<u64, u64, Dir>, u64> idx_to_node;
-    for(size_t i = 0; i<tmp_m.size(); i++){
-        for(size_t j = 0; j<tmp_m.size(); j++){
-            if(tmp_m[i][j] == '#'){
-                continue;
-            }
-            if(tmp_m[i][j] == 'S'){
-                idx_to_node[std::make_tuple(i,j, Dir::LEFT)] = 0;
-            }else if(tmp_m[i][j] == 'E'){
-                idx_to_node[std::make_tuple(i,j, Dir::UP)] = N;
-            } else{
-                if(tmp_m[i+1][j] == '.' || tmp_m[i-1][j] == '.'){
-                    idx_to_node[std::make_tuple(i,j)] = node_idx;
-                    node_idx++;
-                }
-            }
+    template <class T1, class T2, class T3>
+    size_t operator()(const std::tuple<T1, T2, T3>& p) const
+    {
+        return hash_pair()(std::make_pair(hash_pair()(std::make_pair(std::get<0>(p), std::get<1>(p))), std::get<2>(p)));
+    }
+};
+
+void searchHelper(const std::vector<std::vector<char>> &input, Dir dir, const std::pair<u64, u64> pos, std::unordered_set<std::pair<u64, u64>, hash_pair> visited, std::unordered_set<std::pair<u64, u64>, hash_pair>& best_visited, std::unordered_map<std::tuple<u64, u64, Dir>, u64, hash_pair>& min_score_at_place, u64& min_score, u64 curScore) {
+    if (curScore > min_score) {
+        return;
+    }
+    if (input[pos.first][pos.second] == 'E') {
+        if (curScore == min_score) {
+            best_visited.insert(visited.begin(), visited.end());
+        }
+        else if (curScore < min_score) {
+            std::cout <<  "cur best: " <<curScore << std::endl;
+            best_visited.clear();
+            best_visited.insert(visited.begin(), visited.end());
+            min_score = curScore;
         }
     }
+    Dir tmpd = Dir::UP;
+    switch (dir) {
+        case Dir::UP:
+        case Dir::DOWN:
+            tmpd = Dir::UP;
+            break;
+        case Dir::RIGHT:
+        case Dir::LEFT:
+            tmpd = Dir::RIGHT;
+            break;
+    }
 
-    for(const auto&[idx, node]: idx_to_node){
-        const auto&[i,j,d] = idx;
+    if (const auto s = min_score_at_place.find(std::make_tuple(pos.first, pos.second, tmpd)); s != min_score_at_place.end()) {
+        if (s->second < curScore) {
+            // std::cout << "hit" << std::endl;
+            return;
+        }
+    }
+    min_score_at_place[std::make_tuple(pos.first, pos.second, tmpd)] = curScore;
+    visited.emplace(pos);
+    if (min_score_at_place.size()%128 == 0) {
+        std::cout << "visited size: " << min_score_at_place.size() << std::endl;
+    }
+    // std::cout << visited.size() << ':' << pos.first << ',' << pos.second << std::endl;
+    std::pair<u64, u64> tmp_pos;
+    switch (dir) {
 
+        case Dir::UP:
+            tmp_pos = std::make_pair(pos.first-1, pos.second);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::UP, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1);
+            }
+            tmp_pos = std::make_pair(pos.first, pos.second-1);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::LEFT, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+            tmp_pos = std::make_pair(pos.first, pos.second+1);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::RIGHT, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+            break;
+        case Dir::DOWN:
+            tmp_pos = std::make_pair(pos.first+1, pos.second);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::DOWN, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1);
+            }
+            tmp_pos = std::make_pair(pos.first, pos.second-1);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::LEFT, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+            tmp_pos = std::make_pair(pos.first, pos.second+1);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::RIGHT, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+            break;
+        case Dir::LEFT:
+            tmp_pos = std::make_pair(pos.first+1, pos.second);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::DOWN, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+            tmp_pos = std::make_pair(pos.first, pos.second-1);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::LEFT, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1);
+            }
+            tmp_pos = std::make_pair(pos.first-1, pos.second);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::UP, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
 
+            break;
+        case Dir::RIGHT:
+            tmp_pos = std::make_pair(pos.first+1, pos.second);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::DOWN, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+            tmp_pos = std::make_pair(pos.first, pos.second+1);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::RIGHT, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1);
+            }
+            tmp_pos = std::make_pair(pos.first-1, pos.second);
+            if (! (input[tmp_pos.first][tmp_pos.second] == '#' || visited.contains(tmp_pos))) {
+                searchHelper(input, Dir::UP, tmp_pos, visited, best_visited, min_score_at_place, min_score, curScore+1+1000);
+            }
+
+            break;
     }
 
 }
 
-Matrix adj_matrix(){
-           // 1 2 3 4 5 6 7 
-    return  {{{INF,4,6,8,INF,INF,INF},
-             {INF,INF,1,INF,7,INF,INF},
-             {INF,INF,INF,2,5,4,INF},
-             {INF,INF,INF,INF,INF,5,INF},
-             {INF,INF,INF,INF,INF,INF,6},
-             {INF,INF,INF,INF,1,INF,8},
-             {INF,INF,INF,INF,INF,INF,INF}}};
-}
+[[nodiscard]] std::tuple<u64, u64> search(const std::vector<std::vector<char>> &input, const std::pair<u64, u64> init_pos) {
+    std::unordered_map<std::tuple<u64, u64, Dir>, u64, hash_pair> min_score_at_place;
+    std::unordered_set<std::pair<u64, u64>, hash_pair> visited;
+    std::unordered_set<std::pair<u64, u64>, hash_pair> best_visited;
+    u64 min_score = INF;
 
-void disp(const std::unordered_set<u64>& P, const std::unordered_set<u64>& T, const std::array<u64, N>& L, const std::array<u64, N>& L_prime){
-    std::cout << "P: ";
-    for(const auto&ele: P){
-        std::cout << ele << ',';
+    if (input[init_pos.first][init_pos.second-1] != '#') {
+        searchHelper(input, Dir::LEFT, {init_pos.first, init_pos.second-1}, visited, best_visited, min_score_at_place, min_score, 1);
     }
-    std::cout << std::endl;
-    std::cout << "T: ";
-    for(const auto&ele: T){
-        std::cout << ele << ',';
+    if (input[init_pos.first-1][init_pos.second] != '#') {
+        searchHelper(input, Dir::UP, {init_pos.first-1, init_pos.second}, visited, best_visited, min_score_at_place, min_score, 1+1000);
     }
-    std::cout << std::endl;
-    std::cout << "L: ";
-    for(const auto&i: P){
-        std::cout << i << '=' << L[i-1] << ',';
+    if (input[init_pos.first+1][init_pos.second] != '#') {
+        searchHelper(input, Dir::DOWN, {init_pos.first+1, init_pos.second}, visited, best_visited, min_score_at_place, min_score, 1+1000);
     }
-    std::cout << std::endl;
-    std::cout << "L': ";
-    for(const auto&i: T){
-        if(L_prime[i-1] == INF){
-            std::cout << i << "=-,";
-        }else{
-            std::cout << i << '=' << L_prime[i-1] << ',';
-        }
-    }
-    std::cout << std::endl;
+
+    return {min_score, best_visited.size()+2};
 }
 
 int main(const int argc, char *argv[]) {
@@ -118,57 +189,18 @@ int main(const int argc, char *argv[]) {
 
     auto inp = getInput(argv[1]);
 
-    const auto adj = adj_matrix();
-
-    std::unordered_set<u64> P = {{1}};
-    std::unordered_set<u64> T;
-    std::array<u64, N> L({0});
-    std::array<u64, N> L_prime = adj[0];
-    L[1-1] = 0;
-
-    {
-        auto tmp = std::views::iota(static_cast<u64>(1), N+1);
-        std::set_difference(tmp.begin(), tmp.end(), 
-                            P.begin(), P.end(), 
-                            std::inserter(T, T.begin()));
-    }
-
-    
-
-
-    while (!T.empty())
-    {
-        std::cout << "===============" << std::endl;
-        disp(P, T, L, L_prime);
-        u64 k = INF;
-        u64 min_v = INF;
-        for(const auto& idx: T){
-            if(L_prime[idx-1] < min_v){
-                min_v = L_prime[idx-1];
-                k = idx;
+    std::pair<u64, u64> init_pos;
+    u64 count = 0;
+    for (const auto&[i, r]: enumerate(inp)) {
+        for (const auto&[j, c]: enumerate(r)) {
+            if (c=='S') {
+                init_pos = {i, j};
             }
-        }
-        if(k == INF){
-            break;
-        }
-        
-        P.emplace(k);
-        auto k_itr = T.find(k);
-        if(k_itr == T.end()){
-            std::cout << "weewoo" << std::endl;
-        }
-        L[k-1] = L_prime[k-1];
-        T.erase(k_itr);
-        if(T.empty()){
-            break;
-        }
-        
-        for(const auto&j: T){
-            L_prime[j-1] = std::min({L_prime[j-1], L[k-1]+adj[k-1][j-1]});
+            count += c=='.';
         }
     }
-    std::cout << "===============" << std::endl;
-    disp(P, T, L, L_prime);
-
+    std::cout << count << std::endl;
+    auto [res1, res2] = search(inp, init_pos);
+    std::cout << res1 << ',' << res2 << std::endl;
     return 0;
 }
