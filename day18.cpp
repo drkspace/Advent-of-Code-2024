@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <cinttypes>
+#include <thread>
 
 using dt = intmax_t;
 const auto& enumerate = std::ranges::views::enumerate;
@@ -262,19 +263,21 @@ int main(const int argc, char *argv[]) {
         Locs inp;
         while(!res){
             inp = getInput(argv[1], i);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             std::stringstream tmp;
-            tmp << "\033[2J";
+            std::cout << "\033[2J\033[H";
             for(dt i = 0; i<= N; i++){
             for(dt j = 0; j<= N; j++){
                 if(inp[i][j]){
-                    tmp << '#';
+                    tmp << "\u2588";
                 }else{
-                    tmp << '.';
+                    tmp << ' ';
                 }
             }
             tmp << std::endl;
         }
-            std::cout << tmp.str();
+            tmp.seekg(0);
+            std::cout << tmp.str() << std::endl;
             res = search2(inp);
             i++;
         }
