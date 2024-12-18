@@ -51,7 +51,7 @@ struct hash_pair {
 
 using Locs = std::array<std::array<bool, N+1>, N+1>;
 
-Locs getInput(const std::string &fp){
+Locs getInput(const std::string &fp, const size_t n_bytes=N_BYTES){
     std::ifstream file(fp);
     Locs tmp_m;
     for(dt i = 0; i<= N; i++){
@@ -59,7 +59,7 @@ Locs getInput(const std::string &fp){
             tmp_m[i][j] = false;
         }
     }
-    int c = 0;
+    size_t c = 0;
     while (file)
     {
         std::string tmp;
@@ -70,7 +70,7 @@ Locs getInput(const std::string &fp){
             tmp_m[std::strtoimax(l[1].c_str(), nullptr, 10)][std::strtoimax(l[0].c_str(), nullptr, 10)] = true;
             c++;
         }
-        if(c >= N_BYTES){
+        if(c >= n_bytes){
             break;
         }
     }
@@ -167,6 +167,65 @@ void searchHelper(const Locs &walls, const std::pair<dt, dt> pos, std::unordered
     return {min_score, best_visited.size()+2};
 }
 
+template <typename T,typename U>                                                   
+std::pair<T,U> operator+(const std::pair<T,U> & l,const std::pair<T,U> & r) {   
+    return {l.first+r.first,l.second+r.second};                                    
+}   
+
+bool searchHelper2(const Locs &walls, const std::pair<dt, dt> pos, std::array<std::array<dt, N+1>, N+1>& min_score_at_place, const dt x_target, const dt y_target, dt curScore){
+    
+    if(pos.first > N || pos.first < 0 || pos.second > N || pos.second < 0){
+        return false;
+    }
+    
+    if(!walls[pos.first][pos.second]){
+        return false;
+    }
+    if(pos.first == x_target || pos.second == y_target){
+        return true;
+    }
+
+    if (curScore >= min_score_at_place[pos.first][pos.second]) {
+        return false;
+    }
+    
+    min_score_at_place[pos.first][pos.second] = curScore;
+    for(const auto&v: std::initializer_list<std::pair<dt, dt>>{{0, 1}, {1,0}, {-1, 0}, {0, -1}, {1,1}, {1,-1}, {-1,1}, {-1,-1}}){
+        auto tmp = searchHelper2(walls, pos+v, min_score_at_place, x_target, y_target, curScore+1);
+        if(tmp){
+            return true;
+        }
+    }
+
+    return false;
+}
+
+[[nodiscard]] bool search2(const Locs &walls) {
+    std::array<std::array<dt, N+1>, N+1> min_score_at_place = {INF};
+    for(dt i = 0; i<= N; i++){
+        for(dt j = 0; j<= N; j++){
+            min_score_at_place[i][j] = INF;
+        }
+    }
+
+    for(dt i = 0; i<= N; i++){
+        auto found = searchHelper2(walls, {i, 0}, min_score_at_place, 0, N, 1);
+        
+        if(found){
+            return true;
+        }
+    }
+
+    for(dt i = 0; i<= N; i++){
+        auto found = searchHelper2(walls, {i, N}, min_score_at_place, N, 0, 1);
+        if(found){
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int main(const int argc, char *argv[]) {
     easyTimer<std::chrono::milliseconds> t("main ");
 
@@ -176,8 +235,9 @@ int main(const int argc, char *argv[]) {
         return 1;
     }
 
+    
     {
-        auto inp = getInput(argv[1]);
+        const auto inp = getInput(argv[1]);
         for(dt i = 0; i<= N; i++){
             for(dt j = 0; j<= N; j++){
                 if(inp[i][j]){
@@ -194,6 +254,31 @@ int main(const int argc, char *argv[]) {
         std::pair<dt, dt> init_pos = {0,0};
         auto [res1, res2] = search(inp, init_pos);
         std::cout << res1 << ',' << res2 << std::endl;
+    }
+
+    {
+        int i = 1;
+        bool res = false;
+        Locs inp;
+        while(!res){
+            inp = getInput(argv[1], i);
+            std::stringstream tmp;
+            tmp << "\033[2J";
+            for(dt i = 0; i<= N; i++){
+            for(dt j = 0; j<= N; j++){
+                if(inp[i][j]){
+                    tmp << '#';
+                }else{
+                    tmp << '.';
+                }
+            }
+            tmp << std::endl;
+        }
+            std::cout << tmp.str();
+            res = search2(inp);
+            i++;
+        }
+        std::cout << i-1 << std::endl;
     }
     return 0;
 }
