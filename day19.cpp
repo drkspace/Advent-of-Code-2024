@@ -98,13 +98,34 @@ struct Node
         has[ctoint(wrd[0])].value()->add(wrd.substr(1));
     }
 
+    [[nodiscard]] bool contains(const std::span<char>& wrd) const {
+        if (wrd.empty())
+        {
+            return endpoint;
+        }
+
+        if (!has[ctoint(wrd[0])].has_value())
+        {
+            return false;
+        }
+        return has[ctoint(wrd[0])].value()->contains(wrd.subspan(1));
+    }
+
 };
 
-bool canbemade(const Node& head, std::span<char> wan, const std::unordered_set<std::string>& avail )
+void canbemade(const Node& head, const std::span<char>& wan, dt& count, std::unordered_map<std::string, dt>& cache, bool tl = false)
 {
+    if (cache.contains({wan.begin(), wan.end()})) {
+        count += cache[{wan.begin(), wan.end()}];
+        return;
+    }
     std::optional<std::shared_ptr<Node>> curnode = std::make_shared<Node>(head);
     for (const auto& [i, c]: enumerate(wan))
     {
+
+        if (tl) {
+            std::cout << i << '\n';
+        }
         auto prevNode = curnode;
         curnode = curnode.value()->has[ctoint(c)];
 
@@ -112,49 +133,27 @@ bool canbemade(const Node& head, std::span<char> wan, const std::unordered_set<s
         {
             if (!prevNode.value()->endpoint)
             {
-                return false;
+                return;
             }
 
             curnode = head.has[ctoint(c)];
             if (!curnode.has_value())
             {
-                return false;
+                return;
             }
         }
-        else
+        if (curnode.value()->endpoint)
         {
-            if (curnode.value()->endpoint)
-            {
-                if (canbemade(head, wan.subspan(i+1), avail))
-                {
-                    return true;
-                }
+
+            if (curnode.value()->has[ctoint(wan[i+1])].has_value()) {
+                auto init = count;
+                canbemade(head, wan.subspan(i+1), count, cache);
+                cache[{wan.begin()+i+1, wan.end()}] = count - init;
             }
         }
 
     }
-    return curnode.value()->endpoint;
-}
-
-int matches(const std::string wan, const std::unordered_set<std::string>& avail)
-{
-    int count = 0;
-    for (size_t i = 1; i<=wan.size(); ++i)
-    {
-
-        if (auto tmp = wan.substr(0, i); avail.contains(tmp))
-        {
-            if (i == (wan.size()))
-            {
-                return count+1;
-            }
-            else
-            {
-                count += matches({wan.begin()+i, wan.end()}, avail);
-            }
-        }
-    }
-    return count;
+    count += curnode.value()->endpoint;
 }
 
 int main(const int argc, char *argv[]) {
@@ -176,24 +175,19 @@ int main(const int argc, char *argv[]) {
         head.add(w);
     }
 
-    int c = 0;
+    dt c1 = 0;
+    dt c2 = 0;
+    std::unordered_map<std::string, dt> cache;
     for (auto wan : wanted)
     {
-        auto v = canbemade(head, wan, avail);
-        std::cout << wan << '-'<< (v?"true":"false") << std::endl;
-        c += v;
+        dt tmp = 0;
+        canbemade(head, wan, tmp, cache, false);
+        std::cout << wan << '-'<< tmp << std::endl;
+
+        c1 += tmp>0;
+        c2 += tmp;
     }
-    std::cout << c << std::endl;
-    return 0;
-    c = 0;
-    matches("gbbr", avail);
-    for (auto wan : wanted)
-    {
-        auto v = matches(wan, avail);
-        std::cout << wan << '-'<< v << std::endl;
-        c += v;
-    }
-    std::cout << c << std::endl;
+    std::cout << c1 << " : " << c2 << std::endl;
 
     return 0;
 }
