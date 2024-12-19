@@ -1,0 +1,53 @@
+//
+// Created by daniel on 12/18/24.
+//
+
+#ifndef UTILS_H
+#define UTILS_H
+
+inline const auto& enumerate = std::ranges::views::enumerate;
+
+inline auto split(const std::string& inp, const char delim) {
+    std::string tmp;
+    std::vector<std::string> r;
+    std::istringstream s(inp);
+    while (std::getline(s, tmp, delim)) {
+        r.push_back(tmp);
+    }
+    return r;
+};
+
+struct hash_tuple {
+    // copied from https://www.geeksforgeeks.org/how-to-create-an-unordered_map-of-pairs-in-c/
+    template <class T1, class T2>
+    size_t operator()(const std::pair<T1, T2>& p) const
+    {
+        // Hash the first element
+        const size_t hash1 = std::hash<T1>{}(p.first);
+        // Hash the second element
+        const size_t hash2 = std::hash<T2>{}(p.second);
+        // Combine the two hash values
+        return hash1
+               ^ (hash2 + 0x9e3779b9 + (hash1 << 6)
+                  + (hash1 >> 2));
+    }
+
+    template <class T1, class T2, class T3>
+    size_t operator()(const std::tuple<T1, T2, T3>& p) const
+    {
+        return hash_tuple()(std::make_pair(hash_tuple()(std::make_pair(std::get<0>(p), std::get<1>(p))), std::get<2>(p)));
+    }
+
+};
+
+enum class Dir{
+    UP,DOWN,LEFT,RIGHT
+};
+
+inline void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+#endif //UTILS_H

@@ -35,3 +35,5 @@ add_executable(avoc2024_day17 day17.cpp
         easyTimer.h)
 add_executable(avoc2024_day18 day18.cpp
         easyTimer.h)
+add_executable(avoc2024_day19 day19.cpp
+        easyTimer.h utils/utils.h)
