@@ -38,11 +38,28 @@ struct hash_tuple {
         return hash_tuple()(std::make_pair(hash_tuple()(std::make_pair(std::get<0>(p), std::get<1>(p))), std::get<2>(p)));
     }
 
+    template <class T1, class T2, class T3, class T4>
+    size_t operator()(const std::tuple<T1, T2, T3, T4>& p) const
+    {
+        return hash_tuple()(std::make_pair(hash_tuple()(std::make_pair(hash_tuple()(std::make_pair(std::get<0>(p), std::get<1>(p))), std::get<2>(p))), std::get<3>(p)));
+    }
+
 };
+
+template <class T1, class T2>
+std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& p) {
+    os << "(" << p.first << "," << p.second << ")";
+    return os;
+}
 
 enum class Dir{
     UP,DOWN,LEFT,RIGHT
 };
+
+template <typename T,typename U>
+std::pair<T,U> operator+(const std::pair<T,U> & l,const std::pair<T,U> & r) {
+    return {l.first+r.first,l.second+r.second};
+}
 
 inline void ltrim(std::string &s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
