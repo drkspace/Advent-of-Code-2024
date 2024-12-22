@@ -2,10 +2,71 @@
 // Created by daniel on 12/18/24.
 //
 
+#pragma once
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <ranges>
+#include <format>
+#include <print>
+
 inline const auto& enumerate = std::ranges::views::enumerate;
+
+template <typename T>
+struct Point
+{
+    T x;
+    T y;
+
+    Point() = default;
+    Point(T x, T y): x(x), y(y){};
+    Point(const Point& other) = default;
+
+    [[nodiscard]] bool operator==(const Point&) const = default;
+    [[nodiscard]] Point operator+(const Point& other) const
+    {
+        return {this->x+other.x, this->y+other.y};
+    }
+    [[nodiscard]] Point operator-(const Point& other) const
+    {
+        return {this->x-other.x, this->y-other.y};
+    }
+    [[nodiscard]] Point operator*(const Point& other) const
+    {
+        return {this->x*other.x, this->y*other.y};
+    }
+    [[nodiscard]] Point operator*(const T& other) const
+    {
+        return {this->x*other, this->y*other};
+    }
+    [[nodiscard]] Point operator/(const Point& other) const
+    {
+        return {this->x*other.x, this->y*other.y};
+    }
+    [[nodiscard]] Point operator/(const T& other) const
+    {
+        return {this->x/other, this->y/other};
+    }
+};
+
+template<typename T>
+struct std::hash<Point<T>>
+{
+    std::size_t operator()(const Point<T>& p) const noexcept
+    {
+        const std::size_t h1 = std::hash<T>{}(p.x);
+        const std::size_t h2 = std::hash<T>{}(p.y);
+        return h1 ^ (h2 << 1);
+    }
+};
+
+template<typename T>
+struct std::formatter<Point<T>> : std::formatter<std::string> {
+    auto format(Point<T> p, format_context& ctx) const {
+        return formatter<string>::format(
+          std::format("({}, {})", p.x, p.y), ctx);
+    }
+};
 
 inline auto split(const std::string& inp, const char delim) {
     std::string tmp;
