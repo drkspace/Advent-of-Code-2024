@@ -19,6 +19,7 @@ struct Point2d
     Point2d(const Point2d& other) = default;
 
     [[nodiscard]] bool operator==(const Point2d&) const = default;
+    [[nodiscard]] auto operator<=>(const Point2d& other) const = default;
     [[nodiscard]] Point2d operator+(const Point2d& other) const
     {
         return {this->x+other.x, this->y+other.y};
@@ -87,6 +88,7 @@ struct Point3d
     explicit Point3d(const Point2d<T>& other): x(other.x), y(other.y), z(0) {};
 
     [[nodiscard]] bool operator==(const Point3d&) const = default;
+    [[nodiscard]] auto operator<=>(const Point3d& other) const = default;
     [[nodiscard]] Point3d operator+(const Point3d& other) const
     {
         return {this->x+other.x, this->y+other.y, this->z+other.z};
@@ -158,6 +160,7 @@ struct Point4d
     explicit Point4d(const Point3d<T>& other): x(other.x), y(other.y), z(other.z), u(0) {};
 
     [[nodiscard]] bool operator==(const Point4d&) const = default;
+    [[nodiscard]] auto operator<=>(const Point4d& other) const = default;
     [[nodiscard]] Point4d operator+(const Point4d& other) const
     {
         return {this->x+other.x, this->y+other.y, this->z+other.z, this->u+other.u};
