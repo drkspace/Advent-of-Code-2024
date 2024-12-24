@@ -4,6 +4,7 @@ project(avoc2024)
 set(CMAKE_CXX_COMPILER g++-14)
 set(CMAKE_CXX_STANDARD 23)
 add_compile_options(-Wall -Wextra -Werror)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/cppitertools/cppitertools)
 
 add_executable(avoc2024_day1 day1.cpp)
 add_executable(avoc2024_day2 day2.cpp)
@@ -46,3 +47,6 @@ add_executable(avoc2024_day22 day22.cpp
 add_executable(avoc2024_day23 day23.cpp
         easyTimer.h utils/utils.h
         utils/point.h)
+add_executable(avoc2024_day24 day24.cpp
+        easyTimer.h utils/utils.h
+        utils/point.h cppitertools/cppitertools/combinations.hpp)
