@@ -1,6 +1,7 @@
 //
 // Created by daniel on 12/23/24.
 //
+#include <bitset>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -11,6 +12,7 @@
 #include <unordered_map>
 #include <map>
 #include <cinttypes>
+#include <deque>
 #include <numeric>
 
 #include "utils/utils.h"
@@ -97,8 +99,80 @@ std::tuple<WM, TD> getInput(const std::string &fp){
     }
 }
 
+[[nodiscard]] TD findParents(const TD& td, const std::string& child)
+{
+    TD parents;
+    std::deque<std::string> to_find{{child}};
+
+    while (!to_find.empty())
+    {
+        auto c = to_find[0];
+        to_find.pop_front();
+        for (const auto&ele:td)
+        {
+            if (std::get<3>(ele) == c)
+            {
+                parents.emplace_back(ele);
+                to_find.emplace_back(std::get<0>(ele));
+                to_find.emplace_back(std::get<2>(ele));
+                break;
+            }
+        }
+    }
+    return parents;
+}
+
+// [[nodiscard]] bool equiv_to(const TD& td, const TD& match)
+// {
+//     std::vector<std::string> inputs;
+//     for (const auto&[i1, op, i2, out]: td)
+//     {
+//
+//     }
+// }
+[[nodiscard]] std::optional<dt> calcz(WM wm, TD td)
+{
+
+    WM zs;
+    size_t prev_size = 0;
+    while (!td.empty() && prev_size != td.size())
+    {
+        prev_size = td.size();
+        for (auto it = td.begin(); it != td.end();)
+        {
+            auto[i1, op, i2,v] = *it;
+            if (wm.contains(i1) && wm.contains(i2))
+            {
+                auto tmp = doop(wm[i1], wm[i2], op);
+                wm[v] = tmp;
+                if (v[0] == 'z')
+                {
+                    zs[v] = tmp;
+                }
+
+                it = td.erase(it);
+            }else
+            {
+                it++;
+            }
+
+        }
+    }
+
+    if (!td.empty()) {
+        return std::nullopt;
+    }
+    dt N = 0;
+    for (const auto&[k,v]: std::ranges::views::reverse(zs))
+    {
+        N = N << 1 | v;
+    }
+    return N;
+
+}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 int main(const int argc, char *argv[])
 {
     easyTimer<std::chrono::milliseconds> _("main ");
@@ -109,47 +183,14 @@ int main(const int argc, char *argv[])
         return 1;
     }
 
-    // {
-    //     auto [wm, td] = getInput(argv[1]);
-    //
-    //     WM zs;
-    //     while (!td.empty())
-    //     {
-    //         for (auto it = td.begin(); it != td.end();)
-    //         {
-    //             auto[k,vs] = *it;
-    //             if (const auto& [i1, op, i2] = k; wm.contains(i1) && wm.contains(i2))
-    //             {
-    //                 for (const auto& v: vs)
-    //                 {
-    //                     auto tmp = doop(wm[i1], wm[i2], op);
-    //                     wm[v] = tmp;
-    //                     if (v[0] == 'z')
-    //                     {
-    //                         zs[v] = tmp;
-    //                     }
-    //
-    //                 }
-    //                 it = td.erase(it);
-    //             }else
-    //             {
-    //                 it++;
-    //             }
-    //
-    //         }
-    //     }
-    //
-    //     dt N = 0;
-    //     for (const auto&[k,v]: std::ranges::views::reverse(zs))
-    //     {
-    //         std::println("{}: {}", k, v);
-    //         N = N << 1 | v;
-    //     }
-    //     std::println("{}", N);
-    // }
-
     {
-        const auto [wm, td] = getInput(argv[1]);
+        auto [wm, td] = getInput(argv[1]);
+
+        std::println("{}", calcz(wm, td).value());
+    }
+    std::print("\n\n\n");
+    {
+        auto [wm, td] = getInput(argv[1]);
 
         dt Nx = 0;
         dt Ny = 0;
@@ -164,93 +205,179 @@ int main(const int argc, char *argv[])
             }
         }
 
-        // std::unordered_set<std::unordered_set<size_t>> done = {{0}};
-        std::vector<size_t> idxs(td.size());
-        std::iota(idxs.begin(), idxs.end(), 0);
-        for (const auto& tmp1: iter::combinations(idxs, 8)){
-            auto a = tmp1[0];
-            auto b = tmp1[1];
-            auto c = tmp1[2];
-            auto d = tmp1[3];
-            auto e = tmp1[4];
-            auto f = tmp1[5];
-            auto g = tmp1[6];
-            auto h = tmp1[7];
-            // std::println("{},{},{},{},{},{},{},{}", a, b, c, d, e, f, g, h);
-            if (a >= b || c>=d || e>=f || g>=h)
+
+        std::vector<std::pair<std::string, std::string>> bad = {{"qfs", "rcr"},
+                                                                    {"cgn", "spp"}};
+        bad.clear();
+
+        std::vector<std::pair<std::string, std::string>> pre = {{"z05", "bpf"}, {"hcc","z11"}, {"hqc", "qcw"}, {"fdw", "z35"}};
+        std::set<std::string> swapped;
+
+        for (auto&[v1, v2]: pre)
+        {
+            std::vector<size_t> to_swap;
+            for (const auto&[i,ele]: enumerate(td))
+            {
+                if (std::get<3>(ele)==v1 || std::get<3>(ele)==v2)
+                {
+                    to_swap.emplace_back(i);
+                }
+            }
+            auto a = to_swap.at(0);
+            auto b = to_swap.at(1);
+            auto tmp = std::get<3>(td[a]);
+            std::get<3>(td[a]) = std::get<3>(td[b]);
+            std::get<3>(td[b]) = tmp;
+            swapped.emplace(v1);
+            swapped.emplace(v2);
+        }
+
+
+        auto Nz = calcz(wm, td).value();
+        std::println("Nx+Ny={}", Nx+Ny);
+        std::println("Nz={}", Nz);
+        std::bitset<64> bitz(Nz);
+        std::bitset<64> bita(Nx+Ny);
+
+        for (size_t i = 0; i<bita.size();++i)
+        {
+            if (bitz[i] == bita[i])
             {
                 continue;
             }
+            std::println("{}", i);
 
-            if (g%25==0)
+            TD parents;
+            for (const auto&[i1,op,i2,v]:td)
             {
-                std::println("{},{},{},{},{},{},{},{}", a, b, c, d, e, f, g, h);
-            }
-            WM zs;
-            WM wm_cpy = wm;
-            TD td_cpy = td;
-            auto tmp = std::get<3>(td_cpy[a]);
-            std::get<3>(td_cpy[a]) = std::get<3>(td_cpy[b]);
-            std::get<3>(td_cpy[b]) = tmp;
-            tmp = std::get<3>(td_cpy[c]);
-            std::get<3>(td_cpy[c]) = std::get<3>(td_cpy[d]);
-            std::get<3>(td_cpy[d]) = tmp;
-            tmp = std::get<3>(td_cpy[e]);
-            std::get<3>(td_cpy[e]) = std::get<3>(td_cpy[f]);
-            std::get<3>(td_cpy[f]) = tmp;
-            tmp = std::get<3>(td_cpy[g]);
-            std::get<3>(td_cpy[g]) = std::get<3>(td_cpy[h]);
-            std::get<3>(td_cpy[h]) = tmp;
-
-            const std::set<std::string> swapped = {std::get<3>(td_cpy[a]),
-                                                        std::get<3>(td_cpy[b]),
-                                                        std::get<3>(td_cpy[c]),
-                                                        std::get<3>(td_cpy[d]),
-                                                            std::get<3>(td_cpy[e]),
-                                                            std::get<3>(td_cpy[f]),
-                                                            std::get<3>(td_cpy[g]),
-                                                            std::get<3>(td_cpy[h])};
-
-            size_t prev_length = 0;
-            while (!td_cpy.empty() && td_cpy.size() != prev_length)
-            {
-                prev_length = td_cpy.size();
-                for (auto it = td_cpy.begin(); it != td_cpy.end();)
+                if (v == std::format("z{:02d}", i))
                 {
-                    if (auto[i1, op, i2, v] = *it; wm_cpy.contains(i1) && wm_cpy.contains(i2))
+                    parents = findParents(td, v);
+                    break;
+                }
+            }
+
+            // Add a breakpoint here to see what the error is
+            // The output bit "zXX" should be an XOR of [xXX XOR yXX] XOR [the carry bit from zXX-1]
+            std::vector<size_t> idxs(parents.size());
+            std::iota(idxs.begin(), idxs.end(), 0);
+
+            for (const auto& tmp1: iter::combinations(idxs, 4)) {
+                auto a = tmp1[0];
+                auto b = tmp1[1];
+                auto c = tmp1[0];
+                auto d = tmp1[1];
+
+                if (a >= b || c >= d)
+                {
+                    continue;
+                }
+
+                WM wm_cpy = wm;
+                TD par_cpy = parents;
+                auto tmp = std::get<3>(par_cpy[a]);
+                std::get<3>(par_cpy[a]) = std::get<3>(par_cpy[b]);
+                std::get<3>(par_cpy[b]) = tmp;
+                tmp = std::get<3>(par_cpy[c]);
+                std::get<3>(par_cpy[c]) = std::get<3>(par_cpy[d]);
+                std::get<3>(par_cpy[d]) = tmp;
+
+
+                std::vector<std::pair<std::string, std::string>> pairs = {{std::get<3>(par_cpy[a]), std::get<3>(par_cpy[b])},
+                                                                        {std::get<3>(par_cpy[c]),
+                                                                        std::get<3>(par_cpy[d])}};
+
+                const std::set<std::string> swapped_int = {std::get<3>(par_cpy[a]),
+                                                        std::get<3>(par_cpy[b]),
+                                                        std::get<3>(par_cpy[c]),
+                                                            std::get<3>(par_cpy[d])};
+
+                bool skip = false;
+                for (const auto&[v1, v2]: bad)
+                {
+                    if (swapped_int.contains(v1) && swapped_int.contains(v2))
                     {
-                            auto tmp = doop(wm_cpy[i1], wm_cpy[i2], op);
-                            wm_cpy[v] = tmp;
-                            if (v[0] == 'z')
-                            {
-                                zs[v] = tmp;
-                            }
-                        it = td_cpy.erase(it);
-                    }else
-                    {
-                        it++;
+                        skip = true;
+                        break;
                     }
-
                 }
-            }
-
-            dt N = 0;
-            for (const auto&[k,v]: std::ranges::views::reverse(zs))
-            {
-                // std::println("{}: {}", k, v);
-                N = N << 1 | v;
-            }
-            // std::println("{} == {}", N, Nx&Ny);
-            if (N == (Nx&Ny))
-            {
-                for (const auto& ele: swapped)
+                if (skip)
                 {
-                    std::print("{},", ele);
+                    continue;
                 }
-                std::println("");
-                break;
+
+                auto N_calc = calcz(wm_cpy, par_cpy);
+                if (N_calc.has_value() && N_calc.value() == bita[i]) {
+
+                    std::vector<size_t> to_swap;
+                    for (const auto& [ele2, ele3]: pairs)
+                    {
+                        for (const auto&[i,ele]: enumerate(td))
+                        {
+
+                            if (std::get<3>(ele) == ele2 || std::get<3>(ele) == ele3)
+                            {
+                                to_swap.emplace_back(i);
+                                break;
+                            }
+                        }
+                    }
+                    TD td_cpy = td;
+
+                    // check that lower bits haven't been flipped
+                    a = to_swap.at(0);
+                    b = to_swap.at(1);
+                    c = to_swap.at(2);
+                    d = to_swap.at(3);
+                    tmp = std::get<3>(td_cpy[a]);
+                    std::get<3>(td_cpy[a]) = std::get<3>(td_cpy[b]);
+                    std::get<3>(td_cpy[b]) = tmp;
+                    tmp = std::get<3>(td_cpy[c]);
+                    std::get<3>(td_cpy[c]) = std::get<3>(td_cpy[d]);
+                    std::get<3>(td_cpy[d]) = tmp;
+
+                    auto tmp_N = calcz(wm, td);
+                    if (!tmp_N.has_value())
+                    {
+                        std::println("WEEWOO");
+                    }
+                    auto tmpn = tmp_N.value();
+                    std::bitset<64> tmp_bits(tmpn);
+                    bool good = true;
+                    for (size_t j = 0; j<=i; j++)
+                    {
+                        if (bita[j] != tmp_bits[j])
+                        {
+                            good = false;
+                            break;
+                        }
+                    }
+                    if (good || true)
+                    {
+                        swapped.insert(swapped_int.begin(), swapped_int.end());
+                        td = td_cpy;
+                        break;
+                    }
+                }
             }
+            auto tmp = calcz(wm, td);
+            if (!tmp.has_value())
+            {
+                std::println("WEEWOO");
+            }
+            Nz = tmp.value();
+            bitz = Nz;
+            std::print("{}: ", Nz);
+            for (const auto& ele: swapped) {
+                std::print("{},", ele);
+            }
+            std::println("");
         }
+        for (const auto& ele: swapped) {
+            std::print("{},", ele);
+        }
+        std::println("");
     }
+
 }
 #pragma GCC diagnostic pop
