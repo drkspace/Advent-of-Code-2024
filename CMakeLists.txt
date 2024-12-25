@@ -50,3 +50,6 @@ add_executable(avoc2024_day23 day23.cpp
 add_executable(avoc2024_day24 day24.cpp
         easyTimer.h utils/utils.h
         utils/point.h cppitertools/cppitertools/combinations.hpp)
+add_executable(avoc2024_day25 day25.cpp
+        easyTimer.h utils/utils.h
+        utils/point.h)
